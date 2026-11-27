@@ -38,7 +38,10 @@ export default function App() {
     setMessages((prev) => [...prev, { sender: 'user', text: trimmed }]);
     setInput('');
     try {
-      const { data } = await axios.post(`${API_URL}/api/chat/message`, { message: trimmed });
+      const token = localStorage.getItem('token');
+      const { data } = await axios.post(`${API_URL}/api/chat/message`, { message: trimmed }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       setMessages((prev) => [...prev, { sender: 'bot', text: data.reply || 'No reply.' }]);
     } catch {
       setMessages((prev) => [...prev, { sender: 'bot', text: 'Assistant offline.' }]);

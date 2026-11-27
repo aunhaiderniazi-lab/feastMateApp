@@ -97,7 +97,7 @@ const addItemToGroupCart = async (req, res) => {
 
 const removeItemFromGroupCart = async (req, res) => {
     try {
-        const { itemIndex } = req.body;
+        const itemIndex = Number(req.params.itemIndex ?? req.body.itemIndex);
         const roomCode = req.params.roomCode || req.body.roomCode;
         const room = await GroupOrder.findOne({ roomCode: roomCode?.toUpperCase().trim(), status: 'Active' });
         if (!room) return res.status(404).json({ message: 'Active room not found!' });
