@@ -101,7 +101,7 @@ async function buildOrderHistoryReply(userId) {
 
 const handleChat = async (req, res) => {
     try {
-        const { message, userId } = req.body;
+        const { message } = req.body;
         if (!message || !message.trim()) {
             return res.status(400).json({ message: 'Message is required!' });
         }
@@ -118,10 +118,10 @@ const handleChat = async (req, res) => {
                 reply = await buildPriceReply(message);
                 break;
             case 'order_status':
-                reply = await buildOrderStatusReply(userId);
+                reply = await buildOrderStatusReply(req.user?._id);
                 break;
             case 'order_history':
-                reply = await buildOrderHistoryReply(userId);
+                reply = await buildOrderHistoryReply(req.user?._id);
                 break;
             default:
                 reply = STATIC_RESPONSES[intent] || STATIC_RESPONSES.fallback;

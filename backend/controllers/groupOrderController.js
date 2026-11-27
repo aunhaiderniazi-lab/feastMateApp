@@ -1,18 +1,19 @@
+const crypto = require('crypto');
 const GroupOrder = require('../models/GroupOrder');
 const Order = require('../models/Order');
 const Food = require('../models/Food');
 
 const createRoom = async (req, res) => {
     try {
-        const hostId = req.user ? req.user._id : req.body.hostId;
-        const hostName = (req.user ? req.user.name : req.body.hostName)?.trim();
+        const hostId = req.user?._id;
+        const hostName = req.user?.name?.trim();
         if (!hostId || !hostName) {
             return res.status(400).json({ message: 'Host ID and Host Name are required!' });
         }
 
         let roomCode = '';
         for (let attempt = 0; attempt < 5; attempt++) {
-            const candidate = 'FEAST-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+            const candidate = 'FEAST-' + crypto.randomBytes(4).toString('hex').toUpperCase();
             const existing = await GroupOrder.findOne({ roomCode: candidate });
             if (!existing) {
                 roomCode = candidate;
@@ -38,7 +39,8 @@ const createRoom = async (req, res) => {
 
 const joinRoom = async (req, res) => {
     try {
-        const { roomCode, memberName, userId } = req.body;
+        const { memberName } = req.body;
+        const roomCode = req.params.roomCode || req.body.roomCode;
         if (!roomCode || !memberName) {
             return res.status(400).json({ message: 'Room code and your name are required!' });
         }
@@ -49,7 +51,7 @@ const joinRoom = async (req, res) => {
         const cleanName = memberName.trim();
         const exists = room.members.find(m => m.name.toLowerCase() === cleanName.toLowerCase());
         if (!exists) {
-            room.members.push({ name: cleanName, userId: userId || null });
+            room.members.push({ name: cleanName, userId: req.user._id });
             await room.save();
         }
         res.status(200).json({ message: 'Joined Room Successfully!', room });
@@ -60,7 +62,9 @@ const joinRoom = async (req, res) => {
 
 const addItemToGroupCart = async (req, res) => {
     try {
-        const { roomCode, addedBy, foodId, qty = 1 } = req.body;
+        const { foodId, qty = 1 } = req.body;
+        const roomCode = req.params.roomCode || req.body.roomCode;
+        const addedBy = req.user.name;
         const room = await GroupOrder.findOne({ roomCode: roomCode?.toUpperCase().trim(), status: 'Active' });
         if (!room) return res.status(404).json({ message: 'Active room not found!' });
 
@@ -93,7 +97,8 @@ const addItemToGroupCart = async (req, res) => {
 
 const removeItemFromGroupCart = async (req, res) => {
     try {
-        const { roomCode, itemIndex } = req.body;
+        const { itemIndex } = req.body;
+        const roomCode = req.params.roomCode || req.body.roomCode;
         const room = await GroupOrder.findOne({ roomCode: roomCode?.toUpperCase().trim(), status: 'Active' });
         if (!room) return res.status(404).json({ message: 'Active room not found!' });
 
@@ -116,9 +121,13 @@ const removeItemFromGroupCart = async (req, res) => {
 
 const getRoomDetails = async (req, res) => {
     try {
-        const { roomCode } = req.params;
-        const room = await GroupOrder.findOne({ roomCode: roomCode.toUpperCase().trim() });
+        const roomCode = req.params.roomCode.toUpperCase().trim();
+        const room = await GroupOrder.findOne({ roomCode });
         if (!room) return res.status(404).json({ message: 'Room not found!' });
+        const isMember = room.members.some(
+            m => m.userId && m.userId.toString() === req.user._id.toString()
+        );
+        if (!isMember) return res.status(403).json({ message: 'You are not a member of this room.' });
         res.status(200).json(room);
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -127,14 +136,15 @@ const getRoomDetails = async (req, res) => {
 
 const checkoutGroupOrder = async (req, res) => {
     try {
-        const { roomCode, address, paymentMethod, userId } = req.body;
+        const { address, paymentMethod } = req.body;
+        const roomCode = req.params.roomCode || req.body.roomCode;
         const room = await GroupOrder.findOne({ roomCode: roomCode?.toUpperCase().trim(), status: 'Active' });
         if (!room) return res.status(404).json({ message: 'Active room not found!' });
         if (room.cartItems.length === 0) return res.status(400).json({ message: 'Cart is empty!' });
         if (!address || !address.trim()) return res.status(400).json({ message: 'Delivery address is required!' });
 
         const totalAmount = room.cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-        const finalUserId = (req.user && req.user._id) || userId || room.hostId;
+        const finalUserId = req.user._id;
 
         const newOrder = new Order({
             user: finalUserId,
@@ -152,9 +162,23 @@ const checkoutGroupOrder = async (req, res) => {
             roomCode: room.roomCode
         });
 
-        await newOrder.save();
-        room.status = 'Placed';
-        await room.save();
+        // Atomic claim: only one concurrent checkout can flip Active -> Placed.
+        const claimed = await GroupOrder.findOneAndUpdate(
+            { _id: room._id, status: 'Active' },
+            { $set: { status: 'Placed' } },
+            { new: true }
+        );
+        if (!claimed) {
+            return res.status(409).json({ message: 'This group order was already placed.' });
+        }
+        try {
+            await newOrder.save();
+        } catch (err) {
+            await GroupOrder.updateOne(
+                { _id: room._id, status: 'Placed' }, { $set: { status: 'Active' } }
+            );
+            throw err;
+        }
 
         res.status(201).json({ message: 'Group Order Placed Successfully!', order: newOrder });
     } catch (error) {

@@ -62,17 +62,21 @@ async function seedDatabase() {
         } else {
             console.log(`Menu already has ${existingFoods} items; skipping food seed.`);
         }
-        const adminEmail = 'admin@feastmate.com';
+        const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@feastmate.com';
         const adminExists = await User.findOne({ email: adminEmail });
         if (!adminExists) {
-            const hashedPassword = await bcrypt.hash('admin123', 10);
+            const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+            if (!adminPassword) {
+                throw new Error('Set SEED_ADMIN_PASSWORD before seeding a new admin account.');
+            }
+            const hashedPassword = await bcrypt.hash(adminPassword, 12);
             await User.create({
                 name: 'FeastMate Admin',
                 email: adminEmail,
                 password: hashedPassword,
                 role: 'admin'
             });
-            console.log('Created default admin user: admin@feastmate.com / admin123');
+            console.log('Created admin user: ' + adminEmail + ' (password from SEED_ADMIN_PASSWORD)');
         }
         process.exit(0);
     } catch (error) {
