@@ -1,0 +1,68 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": ["hi", "hello", "hey", "salam", "assalam", "good morning", "good evening", "yo"]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": ["bye", "goodbye", "see ya", "take care", "cya", "exit"]
+    },
+    {
+      "tag": "thanks",
+      "patterns": ["thank", "thanks", "thnx", "ty", "appreciate it", "much obliged"]
+    },
+    {
+      "tag": "bot_identity",
+      "patterns": ["who are you", "what are you", "bot", "assistant", "what can you do", "help"]
+    },
+    {
+      "tag": "menu_inquiry",
+      "patterns": ["menu", "food", "dishes", "available", "serve", "what do you have", "show menu"]
+    },
+    {
+      "tag": "category_inquiry",
+      "patterns": ["burger", "pizza", "drink", "fries", "side", "drinks", "burgers", "pizzas"]
+    },
+    {
+      "tag": "price_inquiry",
+      "patterns": ["price", "cost", "how much", "rate", "rs", "price of"]
+    },
+    {
+      "tag": "order_status",
+      "patterns": ["status", "track", "where is my order", "delivered", "arriving", "my order"]
+    },
+    {
+      "tag": "order_history",
+      "patterns": ["history", "past orders", "previous orders", "old orders", "recent orders"]
+    },
+    {
+      "tag": "place_order_help",
+      "patterns": ["how to order", "place an order", "checkout", "add to cart", "buy food"]
+    },
+    {
+      "tag": "group_order_help",
+      "patterns": ["group", "split", "friends", "shared cart", "group order", "bill split"]
+    },
+    {
+      "tag": "group_order_join",
+      "patterns": ["join", "room code", "friends order", "feast-", "join room"]
+    },
+    {
+      "tag": "payment_inquiry",
+      "patterns": ["pay", "payment", "cash", "card", "cod", "credit card", "debit card"]
+    },
+    {
+      "tag": "complaint",
+      "patterns": ["wrong", "cold", "late", "refund", "complaint", "missing", "issue", "problem"]
+    },
+    {
+      "tag": "affirm",
+      "patterns": ["yes", "yeah", "yep", "sure", "ok", "okay", "go ahead"]
+    },
+    {
+      "tag": "deny",
+      "patterns": ["no", "nope", "nah", "cancel", "never mind"]
+    }
+  ]
+}
